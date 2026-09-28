@@ -8,7 +8,7 @@ All files in the module are extracted from the Find X8 (CPH2651) global firmware
 
 | Item | Value |
 |---|---|
-| Device | OnePlus Ace5 Ultimate (MT6991 / Dimensity 9400e) |
+| Device | OnePlus Ace5 Ultra (MT6991 / Dimensity 9400e) |
 | System | ColorOS 16 (China) |
 
 Theoretically works on Dimensity 9400 devices. Do **not** attempt on Snapdragon (Qualcomm) devices.
