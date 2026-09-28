@@ -1,6 +1,5 @@
 #!/system/bin/sh
 # Ace5 至尊版 eSIM
-# 作者: 星坠青川
 #
 # 1. 注入 eSIM 特性到系统的 OPLUS 特性配置
 # 2. 设置模块内文件的权限与 SELinux 标签
