@@ -14,18 +14,29 @@ for c in /data/adb/ksu/bin/busybox /data/adb/magisk/busybox /system/bin/busybox;
     [ -x "$c" ] && BB="$c" && break
 done
 
-# ---------- 0. Platform detection ----------
+# ---------- 0. Platform selection (volume keys) ----------
+# 音量上 = MTK / 音量下 = 高通（Magisk 官方模板同款交互方式）
+ui_print " "
+ui_print "请选择处理器平台："
+ui_print "  音量上键 = MTK (天玑)"
+ui_print "  音量下键 = 高通 (骁龙)"
+ui_print " "
+
+# 用原始键码读取：VOLUMEUP=115, VOLUMEDOWN=114（getevent 数字键码，跨设备稳定）
 PLATFORM=mtk
-BOARD=$(getprop ro.board.platform 2>/dev/null)
-SOC=$(getprop ro.soc.manufacturer 2>/dev/null)
-case "$BOARD" in
-    mt*) PLATFORM=mtk ;;
-    *)   [ "$SOC" = "QTI" ] || [ "$SOC" = "qcom" ] && PLATFORM=qcom ;;
-esac
+# keycheck 循环：无限等待，直到用户按键
+while :; do
+    EVT=$(timeout 1 getevent -c 1 2>/dev/null | grep "0001" || true)
+    case "$EVT" in
+        *"0073"*) PLATFORM=mtk;  break ;;   # KEY_VOLUMEUP
+        *"0072"*) PLATFORM=qcom; break ;;   # KEY_VOLUMEDOWN
+    esac
+done
+
 if [ "$PLATFORM" = "mtk" ]; then
-    ui_print "- Platform: MTK ($BOARD)"
+    ui_print "- 已选择: MTK 平台"
 else
-    ui_print "- Platform: Qualcomm ($BOARD)"
+    ui_print "- 已选择: 高通平台"
 fi
 
 # ---------- 1. Inject eSIM features ----------
