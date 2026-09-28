@@ -42,7 +42,6 @@ system.prop              system properties
 
 ## Notes
 
-- Files are mounted into the system without writing any partition; uninstalling the module and rebooting fully restores the system.
 - Slot identification for pluggable eUICC cards depends on the card's ATR announcement (T=15 interface byte per ETSI TS 102 221). Some environments fail to auto-identify; pair this module with a companion LSPosed module or an EasyEuicc switch if needed.
 
 ## Releases
