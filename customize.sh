@@ -1,10 +1,11 @@
 #!/system/bin/sh
-# Ace5 至尊版 eSIM
+# Ace5 Ultra eSIM (v1.1: MTK + Qualcomm platform detection)
 #
-# 1. 注入 eSIM 特性到系统的 OPLUS 特性配置
-# 2. 设置模块内文件的权限与 SELinux 标签
+# 1. Detect SoC platform and pick the matching eSIM HAL
+# 2. Inject eSIM features into the OPLUS feature config
+# 3. Set permissions and SELinux labels for module files
 
-ui_print "- Ace5 至尊版 eSIM"
+ui_print "- Ace5 Ultra eSIM"
 
 MODDIR=${0%/*}
 [ -n "$MODPATH" ] || MODPATH=$MODDIR
@@ -13,7 +14,21 @@ for c in /data/adb/ksu/bin/busybox /data/adb/magisk/busybox /system/bin/busybox;
     [ -x "$c" ] && BB="$c" && break
 done
 
-# ---------- 1. 注入 eSIM 特性 ----------
+# ---------- 0. Platform detection ----------
+PLATFORM=mtk
+BOARD=$(getprop ro.board.platform 2>/dev/null)
+SOC=$(getprop ro.soc.manufacturer 2>/dev/null)
+case "$BOARD" in
+    mt*) PLATFORM=mtk ;;
+    *)   [ "$SOC" = "QTI" ] || [ "$SOC" = "qcom" ] && PLATFORM=qcom ;;
+esac
+if [ "$PLATFORM" = "mtk" ]; then
+    ui_print "- Platform: MTK ($BOARD)"
+else
+    ui_print "- Platform: Qualcomm ($BOARD)"
+fi
+
+# ---------- 1. Inject eSIM features ----------
 FEATURE_SRC=
 for c in \
     /my_product/etc/extension/com.oplus.oplus-feature.xml \
@@ -47,7 +62,19 @@ else
     fi
 fi
 
-# ---------- 2. 权限 ----------
+# ---------- 2. Deploy platform HAL ----------
+# MTK HAL lives in system/odm, Qualcomm HAL in system-qcom/odm.
+# Move the matching one into place, drop the other.
+if [ "$PLATFORM" = "qcom" ]; then
+    ui_print "- Deploying Qualcomm eSIM HAL"
+    if [ -n "$BB" ]; then $BB mv -f "$MODPATH/system-qcom/odm/bin/hw/vendor.oplus.hardware.esim@1.0-service" "$MODPATH/system/odm/bin/hw/"; $BB mv -f "$MODPATH/system-qcom/odm/lib64/vendor.oplus.hardware.esim-V1-ndk.so" "$MODPATH/system/odm/lib64/"; else mv -f "$MODPATH/system-qcom/odm/bin/hw/vendor.oplus.hardware.esim@1.0-service" "$MODPATH/system/odm/bin/hw/"; mv -f "$MODPATH/system-qcom/odm/lib64/vendor.oplus.hardware.esim-V1-ndk.so" "$MODPATH/system/odm/lib64/"; fi
+else
+    ui_print "- Deploying MTK eSIM HAL"
+fi
+# remove the unused platform dir so nothing stale ships
+if [ -n "$BB" ]; then $BB rm -rf "$MODPATH/system-qcom"; else rm -rf "$MODPATH/system-qcom"; fi
+
+# ---------- 3. Permissions ----------
 set_perm "$MODPATH/customize.sh" 0 0 0755
 set_perm "$MODPATH/common/feature_patch.sh" 0 0 0755
 set_perm_recursive "$MODPATH/initrc" 0 0 0755 0644
@@ -58,7 +85,7 @@ set_perm "$MODPATH/system/system_ext/etc/default-permissions/default-permissions
 set_perm_recursive "$MODPATH/system/odm" 0 2000 0755 0644
 set_perm "$MODPATH/system/odm/bin/hw/vendor.oplus.hardware.esim@1.0-service" 0 2000 0755
 
-# ---------- 3. SELinux 标签 ----------
+# ---------- 4. SELinux labels ----------
 chcon u:object_r:system_file:s0 "$MODPATH/system/system_ext/priv-app/EuiccGoogle/EuiccGoogle.apk" 2>/dev/null
 chcon u:object_r:system_file:s0 "$MODPATH/system/system_ext/etc/permissions/privapp_whitelist_com.google.android.euicc.xml" 2>/dev/null
 chcon u:object_r:system_file:s0 "$MODPATH/system/system_ext/etc/permissions/euicc-restoration.xml" 2>/dev/null
